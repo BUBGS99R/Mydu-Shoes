@@ -1,0 +1,160 @@
+﻿@page "/admin/login"
+
+@using Microsoft.EntityFrameworkCore
+@using Mydu_Shoes.Models
+@inject GiayContext DbContext
+@inject NavigationManager Navigation
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="login-container">
+    <h3>Admin Login</h3>
+
+    <AuthorizeView>
+        <Authorized Context="authContext">
+            <div class="alert alert-info">
+                Bạn đã đăng nhập với tư cách @username. Bạn có muốn <button class="btn btn-link" @onclick="Logout">logout</button>?
+            </div>
+        </Authorized>
+        <NotAuthorized Context="notAuthContext">
+            <EditForm Model="@loginModel" OnValidSubmit="HandleValidSubmit" Context="editFormContext">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label for="username">Tên tài khoản</label>
+                    <InputText id="username" class="form-control" @bind-Value="loginModel.Username" />
+                    <ValidationMessage For="@(() => loginModel.Username)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Mật khẩu</label>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" />
+                    <ValidationMessage For="@(() => loginModel.Password)" />
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Đăng nhập</button>
+            </EditForm>
+            <p>
+                Thêm tài khoản <a href="/admin/register">Đăng Ký ngay</a>.
+            </p>
+        </NotAuthorized>
+    </AuthorizeView>
+
+    @if (loginFailed)
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+</div>
+
+<style>
+   
+
+    .login-container {
+        max-width: 400px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    h3 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .btn {
+        margin-top: 10px;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #004085;
+        }
+
+    .btn-block {
+        display: block;
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    .alert {
+        margin-top: 20px;
+    }
+
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    a {
+        color: #007bff;
+        text-decoration: none;
+    }
+
+        a:hover {
+            text-decoration: underline;
+        }
+</style>
+
+
+@code {
+    private User loginModel = new User();
+    private bool loginFailed = false;
+    private string errorMessage = "";
+    private string username;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            username = user.Identity.Name;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var admin = await DbContext.Users.FirstOrDefaultAsync(a => a.Username == loginModel.Username);
+
+        if (admin == null || admin.Password != loginModel.Password)
+        {
+            errorMessage = "Sai tài khoản hoặc mật khẩu.";
+            loginFailed = true;
+        }
+        else
+        {
+            // Store username in local storage
+            await localStorage.SetItemAsync("username", loginModel.Username);
+            
+            Navigation.NavigateTo("/", true);
+        }
+    }
+
+    private async Task Logout()
+    {
+       
+        
+        await localStorage.RemoveItemAsync("username");
+        // Force page navigation to ensure state is updated
+        Navigation.NavigateTo("/admin/login", true);
+    }
+}

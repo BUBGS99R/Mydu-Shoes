@@ -1,0 +1,182 @@
+﻿@page "/"
+
+<PageTitle>Index</PageTitle>
+
+<main>
+    <section id="slider" class="slider">
+        <div class="slide active">
+            <img src="images/giay12.jpg" alt="Slide 1">
+        </div>
+        <div class="slide">
+            <img src="images/giay13.jpg" alt="Slide 2">
+        </div>
+        <div class="slide">
+            <img src="images/giay14.jpg" alt="Slide 3">
+        </div>
+        <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+        <a class="next" onclick="plusSlides(1)">&#10095;</a>
+    </section>
+
+  
+
+    <section id="about" class="about">
+        <div class="container">
+            <h2>About Us</h2>
+            <p>Chúng tôi đam mê cung cấp những đôi giày Nike tốt nhất cho các vận động viên và người đam mê giày thể thao. Bộ sưu tập của chúng tôi có các thiết kế và công nghệ mới nhất để giúp bạn thể hiện tốt nhất.</p>
+        </div>
+    </section>
+
+    <section id="products" class="products">
+        <div class="container">
+            <h2>Our Products</h2>
+            <div class="product-grid">
+                <div class="product-item">
+                    <img src="images/giay1.jpg" alt="Nike Shoe 1">
+                    <h3>Nike Air Max</h3>
+                    <p>150,000 VNĐ</p>
+                </div>
+                <div class="product-item">
+                    <img src="images/giay2.jpg" alt="Nike Shoe 2">
+                    <h3>Nike Air Zoom</h3>
+                    <p>130,000 VNĐ</p>
+                </div>
+                <div class="product-item">
+                    <img src="images/giay3.jpg" alt="Nike Shoe 3">
+                    <h3>Nike React</h3>
+                    <p>200,000 VNĐ</p>
+                </div>
+                <div class="product-item">
+                    <img src="images/giay3.jpg" alt="Nike Shoe 4">
+                    <h3>Nike Free</h3>
+                    <p>110,000 VNĐ</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+    }
+
+   
+
+    .slider {
+        position: relative;
+        max-width: 100%;
+        margin: auto;
+        overflow: hidden;
+    }
+
+    .slide {
+        display: none;
+    }
+
+        .slide.active {
+            display: block;
+        }
+
+        .slide img {
+            width: 100%;
+            height: auto;
+        }
+
+    .prev, .next {
+        cursor: pointer;
+        position: absolute;
+        top: 50%;
+        width: auto;
+        padding: 16px;
+        margin-top: -22px;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        transition: 0.6s ease;
+        border-radius: 0 3px 3px 0;
+        user-select: none;
+    }
+
+    .next {
+        right: 0;
+        border-radius: 3px 0 0 3px;
+    }
+
+        .prev:hover, .next:hover {
+            background-color: rgba(0,0,0,0.8);
+        }
+
+    .hero {
+        background: url('images/hero.jpg') no-repeat center center/cover;
+        height: 100vh;
+        color: #fff;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+        .hero .cta {
+            background: #ff6f61;
+            color: #fff;
+            padding: 10px 20px;
+            text-decoration: none;
+            margin-top: 20px;
+        }
+
+    .about, .products, .contact {
+        padding: 50px 0;
+        text-align: center;
+    }
+
+    .product-grid {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .product-item {
+        flex: 1 1 calc(25% - 20px);
+        margin: 10px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        background-color: #fff;
+    }
+
+        .product-item img {
+            width: 100%;
+            height: auto;
+        }
+
+    
+</style>
+
+<script>
+    let slideIndex = 0;
+    showSlides();
+
+    function plusSlides(n) {
+        showSlides(slideIndex += n);
+    }
+
+    function showSlides() {
+        let slides = document.getElementsByClassName("slide");
+        for (let i = 0; i < slides.length; i++) {
+            slides[i].classList.remove("active");
+        }
+        slideIndex++;
+        if (slideIndex > slides.length) {
+            slideIndex = 1
+        }
+        slides[slideIndex - 1].classList.add("active");
+        setTimeout(showSlides, 5000); // Change image every 
+    }
+</script>

@@ -1,0 +1,234 @@
+﻿@page "/cart"
+@using Mydu_Shoes.Models
+
+@inject NavigationManager NavigationManager
+@inject CartService CartService
+
+<h3>Giỏ Hàng</h3>
+
+@if (cartItems != null && cartItems.Any())
+{
+    <div class="cart-container">
+        <table class="cart-table">
+            <thead>
+                <tr>
+                    <th>Hình ảnh</th>
+                    <th>Sản phẩm</th>
+                    <th>Giá</th>
+                    <th>Số lượng</th>
+                    <th>Tạm tính</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in cartItems)
+                {
+                    <tr>
+                        <td>
+                            <img src="@item.Product?.Img" alt="Product Image" class="product-image" />
+                        </td>
+                        <td>@(item.Product?.Tensp ?? "Unknown")</td>
+                        <td>@FormatPrice(item.Product?.gia)</td>
+                        <td>
+                            <input type="number" min="1" value="@item.Quantity" @onchange="async (e) => await UpdateQuantity(item, int.Parse(e.Value.ToString()))" class="form-control quantity-input" />
+                        </td>
+                        <td>@FormatTotalPrice(item.Product?.gia, item.Quantity)</td>
+                        <td>
+                            <button class="btn btn-danger" @onclick="async () => await RemoveFromCart(item)">X</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="cart-summary">
+            <div class="coupon">
+                <input type="text" placeholder="Mã ưu đãi" class="form-control coupon-input" />
+                <button class="btn btn-primary coupon-button">ÁP DỤNG</button>
+            </div>
+            <div class="totals">
+                <p><span>Tạm tính:</span> <span>@FormatPrice(cartItems.Sum(i => (i.Product?.gia ?? 0) * i.Quantity))</span></p>
+                <p><span>Tổng:</span> <span>@FormatPrice(cartItems.Sum(i => (i.Product?.gia ?? 0) * i.Quantity))</span></p>
+                <button class="btn btn-primary" @onclick="GoToCheckout">TIẾN HÀNH THANH TOÁN</button>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <p>No items in the cart.</p>
+}
+
+<style>
+    .cart-container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .cart-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+        .cart-table th, .cart-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .cart-table th {
+            background-color: #007bff;
+            color: #ffffff;
+        }
+
+    .product-image {
+        max-width: 100px;
+        max-height: 100px;
+        border-radius: 4px;
+    }
+
+    .quantity-input {
+        width: 60px;
+        padding: 5px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+    .cart-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .coupon {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .coupon-input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+    .coupon-button {
+        padding: 10px 20px;
+        flex-shrink: 0;
+    }
+
+    .totals {
+        text-align: right;
+        flex-grow: 1;
+        margin-top: 20px;
+    }
+
+        .totals p {
+            margin: 5px 0;
+        }
+
+    .btn-primary {
+        background-color: #007bff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        color: #ffffff;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        color: #ffffff;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+</style>
+
+@code {
+    private List<CartItem> cartItems = new List<CartItem>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCartItems();
+    }
+
+    private async Task LoadCartItems()
+    {
+        try
+        {
+            cartItems = (await CartService.GetCartItemsAsync())?.ToList() ?? new List<CartItem>();
+            Console.WriteLine($"Loaded {cartItems.Count} cart items.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading cart items: {ex.Message}");
+        }
+    }
+
+    private async Task RemoveFromCart(CartItem item)
+    {
+        try
+        {
+            await CartService.RemoveFromCartAsync(item);
+            await LoadCartItems(); // Refresh the cart items
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error removing item from cart: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateQuantity(CartItem item, int quantity)
+    {
+        try
+        {
+            item.Quantity = quantity;
+            await CartService.UpdateCartItemAsync(item); // Make sure you have this method in your service
+            await LoadCartItems(); // Refresh the cart items
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating item quantity: {ex.Message}");
+        }
+    }
+
+    private string FormatPrice(decimal? price)
+    {
+        return price?.ToString("C") ?? "N/A";
+    }
+
+    private string FormatTotalPrice(decimal? price, int quantity)
+    {
+        if (price == null)
+        {
+            return "N/A";
+        }
+
+        return (price.Value * quantity).ToString("C");
+    }
+
+    private void GoToCheckout()
+    {
+        NavigationManager.NavigateTo("/checkout");
+    }
+}

@@ -1,0 +1,214 @@
+﻿@page "/checkout"
+@using Microsoft.EntityFrameworkCore
+@using Mydu_Shoes.Models
+@inject NavigationManager NavigationManager
+@inject InvoiceService InvoiceService
+@inject CartService CartService
+@using System.Globalization
+
+<h3>Thông tin thanh toán</h3>
+
+<EditForm Model="invoice" OnValidSubmit="HandleValidSubmit" class="checkout-form">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>Họ và Tên:</label>
+        <InputText @bind-Value="invoice.FullName" class="form-control" />
+    </div>
+    <div class="form-group">
+        <label>Địa chỉ:</label>
+        <InputText @bind-Value="invoice.Address" class="form-control" />
+    </div>
+    <div class="form-group">
+        <label>Số điện thoại:</label>
+        <InputText @bind-Value="invoice.PhoneNumber" class="form-control" />
+    </div>
+    <div class="cart-items">
+        <h4>Items in Cart</h4>
+        @if (cartItems != null && cartItems.Any())
+        {
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Size</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in cartItems)
+                    {
+                        <tr>
+                            <td>@item.Product?.Tensp</td>
+                            <td>@FormatPrice(item.Product?.gia)</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.Size</td>
+                            <td>@FormatTotalPrice(item.Product?.gia, item.Quantity)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>Không có sản phẩm nào trong giỏ hàng.</p>
+        }
+    </div>
+    <div>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="text-danger">@errorMessage</p>
+        }
+    </div>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary btn-block">Thanh toán</button>
+    </div>
+</EditForm>
+
+<style>
+    .checkout-form {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        transition: border-color 0.3s;
+    }
+
+        .form-control:focus {
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        border: none;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+    .cart-items {
+        margin-top: 2rem;
+    }
+
+    .table {
+        width: 100%;
+        margin-bottom: 1rem;
+        background-color: #ffffff;
+    }
+
+    .table-bordered {
+        border: 1px solid #dee2e6;
+    }
+
+        .table-bordered th,
+        .table-bordered td {
+            border: 1px solid #dee2e6;
+        }
+
+    .text-danger {
+        color: #dc3545 !important;
+    }
+</style>
+
+@code {
+    private Invoice invoice = new Invoice();
+    private List<CartItem> cartItems = new List<CartItem>();
+    private string errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var items = await CartService.GetCartItemsAsync();
+            cartItems = items?.ToList() ?? new List<CartItem>();
+
+            foreach (var item in cartItems)
+            {
+                if (item.Id == Guid.Empty)
+                {
+                    item.Id = Guid.NewGuid();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi khi tải sản phẩm trong giỏ hàng: {ex.Message}";
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(invoice.FullName) || string.IsNullOrEmpty(invoice.Address) || string.IsNullOrEmpty(invoice.PhoneNumber))
+            {
+                errorMessage = "Vui lòng điền đầy đủ thông tin thanh toán.";
+                return;
+            }
+
+            invoice.Id = Guid.NewGuid();
+            invoice.CreatedDate = DateTime.Now;
+
+            await InvoiceService.SaveInvoiceAsync(invoice);
+            await CartService.ClearCartAsync();
+            NavigationManager.NavigateTo("/invoices");
+        }
+        catch (DbUpdateException dbEx)
+        {
+            if (dbEx.InnerException != null)
+            {
+                errorMessage = $"Có lỗi xảy ra trong quá trình thanh toán: {dbEx.InnerException.Message}";
+            }
+            else
+            {
+                errorMessage = $"Có lỗi xảy ra trong quá trình thanh toán: {dbEx.Message}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Có lỗi xảy ra trong quá trình thanh toán: {ex.Message}";
+        }
+    }
+
+    private string FormatPrice(decimal? price)
+    {
+        return price?.ToString("C", CultureInfo.CurrentCulture) ?? "N/A";
+    }
+
+    private string FormatTotalPrice(decimal? price, int quantity)
+    {
+        if (price == null)
+        {
+            return "N/A";
+        }
+
+        return (price.Value * quantity).ToString("C", CultureInfo.CurrentCulture);
+    }
+}

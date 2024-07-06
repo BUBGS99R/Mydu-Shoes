@@ -1,0 +1,93 @@
+﻿@page "/product/{id:guid}"
+@using Mydu_Shoes.Models
+@inject GiayContext DbContext
+@inject CartService CartService
+@inject NavigationManager Navigation
+@using Microsoft.EntityFrameworkCore
+
+<div class="product-details">
+    @if (product != null)
+    {
+        <div class="product-card">
+            <div class="product-image">
+                <img src="@product.Img" alt="Product Image" />
+            </div>
+            <div class="product-info">
+                <h1>@product.Tensp</h1>
+                <p class="product-price">@string.Format("{0:C}", product.gia)</p>
+                <p class="product-description">@product.Description</p>
+                <p class="product-size">@product.Size</p>
+                <p class="product-category">Category: @(product.Category?.Name ?? "Uncategorized")</p>
+                <div class="form-group">
+                    <label for="size">Select Size:</label>
+                    <select id="size" class="form-control" @bind="selectedSize">
+                        <option value="S">Size S</option>
+                        <option value="M">Size M</option>
+                        <option value="L">Size L</option>
+                        <option value="XL">Size XL</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="quantity">Quantity:</label>
+                    <input id="quantity" type="number" class="form-control" @bind="quantity" min="1" />
+                </div>
+                <button class="btn btn-primary" @onclick="AddToCartAsync">Add to Cart</button>
+                <button class="btn btn-secondary" @onclick="GoBack">Back to Products</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <p>Loading...</p>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid id { get; set; }
+    private products product;
+    private string selectedSize = "S";
+    private int quantity = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProduct();
+    }
+
+    private async Task LoadProduct()
+    {
+        try
+        {
+            product = await DbContext.Product.Include(p => p.Category).FirstOrDefaultAsync(p => p.Id == id);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading product: {ex.Message}");
+        }
+    }
+
+    private async Task AddToCartAsync()
+    {
+        try
+        {
+            var cartItem = new CartItem
+                {
+                    Id = Guid.NewGuid(),
+                    ProductId = product.Id,
+                    Product = product,
+                    Quantity = quantity,
+                    Size = selectedSize
+                };
+            await CartService.AddToCartAsync(cartItem);
+            Console.WriteLine($"Product added to cart: {product.Tensp}, Size: {selectedSize}, Quantity: {quantity}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error adding to cart: {ex.Message}");
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/Product");
+    }
+}

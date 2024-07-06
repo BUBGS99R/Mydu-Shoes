@@ -1,0 +1,112 @@
+﻿@page "/admin/Category"
+@using Mydu_Shoes.Models
+
+@inject GiayContext DbContext
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Forms
+
+<h3>Category List</h3>
+
+@if (categories != null && categories.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Category Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var category in categories)
+            {
+                <tr>
+                    <td>@category.Id</td>
+                    <td>@category.Name</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" @onclick="() => EditCategory(category)">Edit</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteCategory(category.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No categories available.</p>
+}
+
+<h3>@(isEdit ? "Edit Category" : "Add Category")</h3>
+
+<EditForm Model="@category" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="name">Category Name:</label>
+        <InputText id="name" class="form-control" @bind-Value="category.Name" />
+    </div>
+    <button type="submit" class="btn btn-primary">@(isEdit ? "Update Category" : "Add Category")</button>
+    @if (isEdit)
+    {
+        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+    }
+</EditForm>
+
+@code {
+    private Categories category = new Categories();
+    private List<Categories> categories;
+    private bool isEdit = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        categories = await DbContext.Categories.ToListAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isEdit)
+        {
+            DbContext.Categories.Update(category);
+        }
+        else
+        {
+            category.Id = Guid.NewGuid(); // Ensure a new GUID is generated for the Id
+            DbContext.Categories.Add(category);
+        }
+
+        await DbContext.SaveChangesAsync();
+        await LoadCategories(); // Refresh the category list
+        category = new Categories(); // Reset the form
+        isEdit = false; // Reset edit mode
+    }
+
+    private void EditCategory(Categories categoryToEdit)
+    {
+        category = categoryToEdit;
+        isEdit = true;
+    }
+
+    private async Task DeleteCategory(Guid id)
+    {
+        var categoryToDelete = await DbContext.Categories.FindAsync(id);
+        if (categoryToDelete != null)
+        {
+            DbContext.Categories.Remove(categoryToDelete);
+            await DbContext.SaveChangesAsync();
+            await LoadCategories();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        category = new Categories(); // Reset the form
+        isEdit = false; // Exit edit mode
+    }
+}

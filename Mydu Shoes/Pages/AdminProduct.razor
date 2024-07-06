@@ -1,0 +1,186 @@
+﻿@page "/admin/Product"
+@using Mydu_Shoes.Models
+
+@inject GiayContext DbContext
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Forms
+@using System.IO
+
+<h3>Product List</h3>
+
+@if (productsList != null && productsList.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Product Name</th>
+                <th>Image</th>
+                <th>Price</th>
+                <th>Description</th>
+                <th>Size</th>
+                <th>Category</th>
+                <th>Actions</th> <!-- Add Actions column header -->
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in productsList)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.Tensp</td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(item.Img))
+                        {
+                            <img src="@item.Img" alt="Product Image" style="max-width: 100px; max-height: 100px;" />
+                        }
+                    </td>
+                    <td>@item.gia</td>
+                    <td>@item.Description</td>
+                    <td>@item.Size</td>
+                    <td>@(item.Category?.Name ?? "Uncategorized")</td>
+                    <td>
+                        <button class="btn btn-warning" @onclick="() => EditProduct(item)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteProduct(item.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No products available.</p>
+}
+
+<h3>Add / Edit Product</h3>
+
+<EditForm Model="@product" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="tensp">Product Name:</label>
+        <InputText id="tensp" class="form-control" @bind-Value="product.Tensp" />
+    </div>
+    <div class="form-group">
+        <label for="img">Image URL:</label>
+        <InputFile OnChange="HandleFileSelected" />
+    </div>
+    <div class="form-group">
+        <label for="gia">Price:</label>
+        <InputNumber id="gia" class="form-control" @bind-Value="product.gia" />
+    </div>
+    <div class="form-group">
+        <label for="description">Description:</label>
+        <InputText id="description" class="form-control" @bind-Value="product.Description" />
+    </div>
+    <div class="form-group">
+        <label for="size">Size:</label>
+        <InputText id="size" class="form-control" @bind-Value="product.Size" />
+    </div>
+    <div class="form-group">
+        <label for="category">Category:</label>
+        <select id="category" class="form-control" @bind="product.CategoryId">
+            <option value="">Select a category</option>
+            @if (categories != null && categories.Any())
+            {
+                @foreach (var category in categories)
+                {
+                    <option value="@category.Id">@category.Name</option>
+                }
+            }
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Product</button>
+</EditForm>
+<style>
+    .table .btn-warning {
+        background-color: orange;
+        color: white;
+    }
+
+    .table .btn-danger {
+        background-color: red;
+        color: white;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+</style>
+@code {
+    private products product = new products();
+    private List<products> productsList;
+    private List<Categories> categories = new List<Categories>(); // Initialize the list
+    private bool isEditMode = false; // Track if we are in edit mode
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+        await LoadCategories();
+    }
+
+    private async Task LoadProducts()
+    {
+        productsList = await DbContext.Product.Include(p => p.Category).ToListAsync();
+    }
+
+    private async Task LoadCategories()
+    {
+        categories = await DbContext.Categories.ToListAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isEditMode)
+        {
+            DbContext.Product.Update(product);
+        }
+        else
+        {
+            product.Id = Guid.NewGuid(); // Ensure a new GUID is generated for the Id
+            DbContext.Product.Add(product);
+        }
+        await DbContext.SaveChangesAsync();
+        await LoadProducts(); // Refresh the product list
+        product = new products(); // Reset the form
+        isEditMode = false; // Reset edit mode
+    }
+
+    private void EditProduct(products item)
+    {
+        product = item;
+        isEditMode = true;
+    }
+
+    private async Task DeleteProduct(Guid productId)
+    {
+        var productToDelete = await DbContext.Product.FindAsync(productId);
+        if (productToDelete != null)
+        {
+            DbContext.Product.Remove(productToDelete);
+            await DbContext.SaveChangesAsync();
+            await LoadProducts(); // Refresh the product list
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var uploadedFile = e.File;
+        var filePath = Path.Combine("wwwroot", "images", uploadedFile.Name);
+
+        // Ensure the directory exists
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+
+        // Save the file to the server
+        using (var fileStream = new FileStream(filePath, FileMode.Create))
+        {
+            await uploadedFile.OpenReadStream().CopyToAsync(fileStream);
+        }
+
+        // Update the product's image URL
+        product.Img = $"/images/{uploadedFile.Name}";
+    }
+}
